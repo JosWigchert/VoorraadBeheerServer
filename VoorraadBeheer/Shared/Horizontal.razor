@@ -1,0 +1,30 @@
+﻿<div>
+    <div  style="float:left">
+        @LeftContent
+    </div>
+    <div  style="float:left">
+        @MiddleLeftContent
+    </div>
+    <div>
+        @MiddleContent
+    </div>
+    <div  style="float:right">
+        @MiddleRightContent
+    </div>
+    <div style="float:right">
+        @RightContent
+    </div>
+    <div style="clear:both"/>
+</div>
+@code {
+    [Parameter]
+	public RenderFragment? LeftContent { get; set; }
+    [Parameter]
+	public RenderFragment? MiddleLeftContent { get; set; }
+    [Parameter]
+	public RenderFragment? MiddleContent { get; set; }
+    [Parameter]
+	public RenderFragment? MiddleRightContent { get; set; }
+    [Parameter]
+	public RenderFragment? RightContent { get; set; }
+}

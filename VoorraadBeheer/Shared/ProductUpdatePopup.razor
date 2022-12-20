@@ -1,0 +1,158 @@
+﻿@using VoorraadBeheer.Models;
+@{
+    var showClass = IsVisible ? string.Empty : "d-none";
+}
+
+<div class="toast-container popup-overlay p-3 @showClass" data-bs-autohide="true" data-bs-delay="5000">
+    <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">@Product</strong>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="Close"></button>
+        </div>
+
+        <div class="toast-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th>Per Piece</th>
+                        <th>In storage</th>
+                        <th>After update</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ingr in productIngredients)
+                    {
+                        if (ingr.IngredientToEdit.IsEditing)
+                        {
+                            <tr>
+                                <td>@ingr.ProductIngredient.Ingredient</td>
+                                <td>@ingr.ProductIngredient.Amount @ingr.ProductIngredient.UnitSmall</td>
+                                <td>@ingr.Ingredient.Amount @ingr.Ingredient.UnitSmall</td>
+                                <td>
+                                    <input type="number" class="form-control" placeholder="The unit of the amount" @bind="@ingr.IngredientToEdit.Amount" />
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-link" @onclick="() => ResetIngredient(ingr)">
+                                        <i class="fas fa-window-close" />
+                                    </button>
+                                    <button type="button" class="btn btn-link" @onclick="() => EnableEditing(false, ingr.IngredientToEdit)">
+                                        <i class="fas fa-check-square" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td>@ingr.ProductIngredient.Ingredient</td>
+                                <td>@ingr.ProductIngredient.Amount @ingr.ProductIngredient.UnitSmall</td>
+                                <td>@ingr.Ingredient.Amount @ingr.Ingredient.UnitSmall</td>
+                                <td>@ingr.IngredientToEdit.Amount @ingr.IngredientToEdit.UnitSmall</td>
+                                <td>
+                                    <button type="button" class="btn btn-link" @onclick="() => EnableEditing(true, ingr.IngredientToEdit)">
+                                        <i class="fas fa-pen" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    [Parameter]
+    public string? HeaderText { get; set; }
+
+    private string Product = "Taart";
+    private int Amount = 100;
+
+    private List<IngredientModel> productIngredient = new List<IngredientModel>();
+    private List<IngredientModel> allIngredients = new List<IngredientModel>();
+    private List<IngredientModel> toUpdateIngredients = new List<IngredientModel>();
+
+    public class ProductIngredientModel
+    {
+        public ProductIngredientModel()
+        {
+        }
+
+        public ProductIngredientModel(ProductIngredientModel productIngredientModel)
+        {
+            ProductIngredient = new IngredientModel(productIngredientModel.ProductIngredient);
+            Ingredient = new IngredientModel(productIngredientModel.Ingredient);
+            IngredientToEdit = new IngredientModel(productIngredientModel.IngredientToEdit);
+        }
+
+        public IngredientModel ProductIngredient { get; set; }
+        public IngredientModel Ingredient { get; set; }
+        public IngredientModel IngredientToEdit { get; set; }
+    }
+
+    private List<ProductIngredientModel> productIngredients = new List<ProductIngredientModel>(); 
+
+    protected override async Task OnInitializedAsync()
+    {
+        productIngredient.Add(new IngredientModel() { Ingredient = "boter", Amount = .23f, UnitSmall = "kg" });
+        productIngredient.Add(new IngredientModel() { Ingredient = "suiker", Amount = .67f, UnitSmall = "kg" });
+        productIngredient.Add(new IngredientModel() { Ingredient = "zout", Amount = .82f, UnitSmall = "kg" });
+
+        allIngredients.Add(new IngredientModel() { Ingredient = "boter", Amount = 200, UnitSmall = "kg" });
+        allIngredients.Add(new IngredientModel() { Ingredient = "suiker", Amount = 300, UnitSmall = "kg" });
+        allIngredients.Add(new IngredientModel() { Ingredient = "zout", Amount = 513, UnitSmall = "kg" });
+        allIngredients.Add(new IngredientModel() { Ingredient = "water", Amount = 123, UnitSmall = "kg" });
+        allIngredients.Add(new IngredientModel() { Ingredient = "melk", Amount = 63, UnitSmall = "kg" });
+        allIngredients.Add(new IngredientModel() { Ingredient = "ei", Amount = 906, UnitSmall = "kg" });
+
+        productIngredients.Clear();
+        foreach (var item in productIngredient)
+        {
+            var pim = new ProductIngredientModel()
+                {
+                    ProductIngredient = item,
+                    Ingredient = allIngredients.FirstOrDefault(x => x.Ingredient == item.Ingredient),
+                    IngredientToEdit = new IngredientModel(allIngredients.FirstOrDefault(x => x.Ingredient == item.Ingredient))
+                };
+            pim.IngredientToEdit.Amount = pim.Ingredient.Amount - pim.ProductIngredient.Amount * Amount;
+            productIngredients.Add(pim);
+        }
+    }
+
+    private async Task ResetIngredient(ProductIngredientModel instanceData)
+    {
+        instanceData.IngredientToEdit.Amount = instanceData.Ingredient.Amount - instanceData.ProductIngredient.Amount * Amount;
+        await EnableEditing(false, instanceData.IngredientToEdit);
+    }
+
+    private async Task EnableEditing(bool flag, IngredientModel instanceData)
+    {
+        instanceData.IsEditing = flag;
+        if (!flag)
+        {
+            //ingredients = (await IngredientService.GetIngredients()).ToList();
+        }
+    }
+
+    public void Show(string headerText = "")
+    {
+        HeaderText = headerText;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        HeaderText = string.Empty;
+        IsVisible = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,67 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">VoorraadBeheer</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/register/b942fd10-6d46-411f-ab25-856495f70949">
+                <span class="oi oi-plus" aria-hidden="true"></span> Register User
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/register/d88f9780-ff1c-4827-8b3f-675e5c610a8d">
+                <span class="oi oi-plus" aria-hidden="true"></span> Register Administrator
+            </NavLink>
+        </div>
+
+        <AuthorizeView Roles="Administrator,User">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="fetchdata">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Roles="Administrator,User">
+             <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="products">
+                        <span class="fas fa-lg fa-cake-candles" aria-hidden="true" style="width: 32px;"></span> Products
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Roles="Administrator,User">
+             <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="ingredients">
+                        <span class="fas fa-lg fa-wheat-awn" aria-hidden="true" style="width: 32px;"></span> Ingredients
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

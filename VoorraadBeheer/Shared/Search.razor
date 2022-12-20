@@ -1,0 +1,32 @@
+﻿<table class="border" style="margin: .5em .5em .5em 0em;">
+    <tr>
+        <td colspan="5" align="left">
+            <h5 style="margin: .5em .5em 0em .5em;">Search @Title</h5>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div style="margin: .5em 0em .5em .5em;">
+                @Title:
+            </div>
+        </td>
+        <td>
+            <input class="input-group-text" type="text" style="margin: .5em 0em .5em .5em;" @bind-value="@search" />
+        </td>
+        <td>
+            <input type="button" class="btn btn-primary" value="Search" style="margin: .5em .5em .5em .5em;" @onclick="() => Callback?.Invoke(search)" />
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public Action<string> Callback { get; set; }
+
+    private string search;
+
+
+}

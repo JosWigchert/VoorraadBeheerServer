@@ -1,0 +1,81 @@
+﻿@page "/login"
+@using Authentication
+@using VoorraadBeheer.Authentication.Cryptography
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager NavigationManager
+@inject UserDetailService UserService
+@inject CryptographyHelper CryptoHelper
+
+<PageTitle>Login</PageTitle>
+
+<div class="row">
+    <div class="col-lg-4 offset-lg-4 pt-4 pb-4 border align-content-center align-middle">
+        <div class="mb-3 text-center">
+            <h3>Login</h3>
+        </div>
+        <div class="mb-3">
+            <label>Username</label>
+            <input @bind="username" class="form-control" placeholder="username" />
+        </div>
+        <div class="mb-3">
+            <label>Password</label>
+            <input @bind="password" type="password" class="form-control" placeholder="password" />
+        </div>
+        <div class="mb-3">
+            <Horizontal>
+                <LeftContent>
+                    <button @onclick="Authenticate" class="btn btn-primary" >Login</button>
+                </LeftContent>
+                <RightContent>
+                    <div style="color:indianred; position:relative; top:25%;">
+                        @errorText
+                    </div>
+                </RightContent>
+            </Horizontal>
+        </div>
+        <AuthorizeView>
+            <Authorized>
+                You are already logged in
+            </Authorized>
+            <Authorizing>
+                Checking credentials...
+            </Authorizing>
+        </AuthorizeView>
+        <LoadingOverlay IsEnabled="@loading" />
+    </div>
+</div>
+
+@code {
+    string username;
+    string password;
+
+    string errorText;
+
+    bool loading = false;
+
+    private async Task Authenticate()
+    {
+        loading = true;
+        errorText = string.Empty;
+        StateHasChanged();
+
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
+        UserModel user = await UserService.GetUser(username);
+
+        if (user != null && CryptoHelper.VerifyHash(password, user.Salt, user.Hash))
+        {
+            await customAuthStateProvider.UpdateAuthenticationState(new UserSession
+                {
+                    UserName = user.Username,
+                    Role = user.Role
+                });
+            NavigationManager.NavigateTo("/", true);
+        }
+        else
+        {
+            errorText = "Invalid username or password";
+        }
+        loading = false;
+        StateHasChanged();
+    }
+}

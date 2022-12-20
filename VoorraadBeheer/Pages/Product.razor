@@ -1,0 +1,217 @@
+﻿@page "/product/{ProductId:int}"
+@using VoorraadBeheer.Models;
+@using VoorraadBeheer.Data;
+@using VoorraadBeheer.Shared;
+@inject IJSRuntime JSRuntime
+@inject ProductDetailService ProductService
+@inject IngredientDetailService IngredientService
+
+<PageTitle>Product</PageTitle>
+
+@if (product.Id < 0)
+{
+    <p>Invalid product selected</p>
+}
+else
+{
+    <h3>@product.Product</h3>
+
+    <Search Title="Ingredient" Callback="@searchDetails" />
+
+    <hr />
+
+    if (ingredients == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <Horizontal>
+            <LeftContent>
+                <h4>Ingredients:</h4>
+            </LeftContent>
+            <RightContent>
+                <AuthorizeView Roles="Administrator">
+                    <Authorized>
+                        <button type="button" class="btn btn-success" @onclick="@AddIngredient">
+                            <i class="fas fa-plus"/> Add Ingredient
+                        </button>
+                    </Authorized>
+                </AuthorizeView>
+            </RightContent>
+        </Horizontal>
+       
+        <table class="table" style="margin: 1em 0em 0em 0em;">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Nodig voor 1</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var prodIngr in productIngredients)
+                {
+                    if (prodIngr.IsEditing)
+                    {
+                        <tr>
+                            <td>
+                                <EditForm Model="prodIngr">
+                                    <DropDown @bind-Value="prodIngr.IngredientModel.Id" class="form-control" id="Number">
+                                    @foreach (var ingr in ingredients)
+                                    {
+                                        <option value="@ingr.Id">@ingr.Ingredient</option>
+                                    }
+                                    </DropDown>
+                                </EditForm>
+                            </td>
+                            <td>
+                                <Horizontal>
+                                    <LeftContent>
+                                        <input type="number" class="form-control" placeholder="How much is in storage" @bind="@prodIngr.IngredientModel.Amount" min="0" max="65535" />
+                                    </LeftContent>
+                                    <MiddleContent>
+                                        <AuthorizeView Roles="Administrator">
+                                            <Authorized>
+                                                <button type="button" class="btn btn-link" @onclick="() => AddToIngredient(prodIngr)">
+                                                    <i class="fas fa-plus" />
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </MiddleContent>
+                                </Horizontal>
+                            </td>
+                            <td width="160">
+                                <button type="button" class="btn btn-link" @onclick="() => EnableEditing(false, prodIngr)">
+                                    <i class="fas fa-ban" />
+                                </button>
+                                <AuthorizeView Roles="Administrator">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-link" @onclick="() => UpdateInstance(prodIngr)">
+                                        <i class="fas fa-check" />
+                                        </button>
+                                        <button type="button" class="btn btn-link" @onclick="() => RemoveInstance(prodIngr)">
+                                            <i class="fas fa-trash" />
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>
+                                @prodIngr.IngredientModel.Ingredient
+                            </td>
+                            <td>@prodIngr.IngredientModel.Amount @prodIngr.IngredientModel.UnitSmall</td>
+                            <td width="160">
+                                <AuthorizeView Roles="Administrator">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-link" @onclick="() => EnableEditing(true, prodIngr)">
+                                            <i class="fas fa-pen" />
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                }
+            
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter]
+    public int ProductId { get; set; }
+
+    public int SelectedIngredientId;
+
+    private ProductModel product;
+
+
+    string ingredientName = "";
+    private List<ProductIngredientModel> productIngredients = new List<ProductIngredientModel>();
+    private List<IngredientModel> ingredients = new List<IngredientModel>();
+    private SortingList<ProductIngredientModel> Sort = new SortingList<ProductIngredientModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = (await ProductService.GetProductById(ProductId));
+        productIngredients = (await ProductService.GetProductIngredients(ProductId)).ToList();
+        ingredients = (await IngredientService.GetIngredients()).ToList();
+
+        Sort.Bind(productIngredients);
+        Sort.GetString = ingr => { return ingr.IngredientModel.Ingredient; };
+    }
+
+    private async void searchDetails(string search)
+    {
+        productIngredients = Sort.CheckItems(search).ToList();
+    }
+
+    private async void EnableEditing(bool flag, ProductIngredientModel instanceData)
+    {
+        if (flag && productIngredients.Any(ingr => { return ingr.IsEditing; }))
+            return;
+
+        instanceData.IsEditing = flag;
+        if (!flag)
+        {
+            productIngredients = (await ProductService.GetProductIngredients(ProductId)).ToList();
+            Sort.Bind(productIngredients);
+            StateHasChanged();
+        }
+    }
+
+    private async void UpdateInstance(ProductIngredientModel instanceData)
+    {
+        if (!await ProductService.ProductIngredientExists(product.Id, instanceData.IngredientModel.Id))
+        {
+            await ProductService.AddProductIngredient(product.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
+        }
+        else
+        {
+            await ProductService.UpdateProductIngredientAmount(instanceData.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
+        }
+        EnableEditing(false, instanceData);
+
+    }
+
+    private async void AddToIngredient(ProductIngredientModel instanceData)
+    {
+        string userInput = await JSRuntime.InvokeAsync<string>("prompt", "How much do you want to add?");
+        userInput = userInput.Replace('.', ',');
+
+        if (float.TryParse(userInput, out float amountToAdd))
+        {
+            instanceData.IngredientModel.Amount += amountToAdd;
+            StateHasChanged();
+        }
+    }
+
+    private async void AddIngredient()
+    {
+        if (productIngredients.Any(ingr => { return ingr.Id == -1 && ingr.IsEditing; }))
+            return;
+
+        productIngredients.Insert(0, new ProductIngredientModel() { IsEditing = true });
+    }
+
+    private async void RemoveInstance(ProductIngredientModel instanceData)
+    {
+        if (instanceData.Id == -1)
+        {
+            EnableEditing(false, instanceData);
+            return;
+        }
+
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to remove the ingredient?");
+        if (confirm)
+        {
+            await ProductService.RemoveProductIngredient(product.Id, instanceData.Id);
+            EnableEditing(false, instanceData);
+        }
+    }
+}

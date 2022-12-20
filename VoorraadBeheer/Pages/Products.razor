@@ -1,0 +1,209 @@
+﻿@page "/products"
+@using VoorraadBeheer.Models;
+@using VoorraadBeheer.Data;
+@inject IJSRuntime JSRuntime
+@inject ProductDetailService ProductService
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize(Roles = "Administrator,User")]
+
+<PageTitle>Products</PageTitle>
+<h3>Products</h3>
+
+<Search Title="Product" Callback="@searchDetails" />
+
+<hr />
+
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <Horizontal>
+        <LeftContent>
+            <h4>Products:</h4>
+        </LeftContent>
+        <RightContent>
+            <AuthorizeView Roles="Administrator">
+                <Authorized>
+                    <button type="button" class="btn btn-success" @onclick="@AddProduct">
+                        <i class="fas fa-plus"/> Add Product
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        </RightContent>
+    </Horizontal>
+       
+        <table class="table" style="margin: 1em 0em 0em 0em;">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>In opslag</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ingr in products)
+                {
+                    if (ingr.IsEditing)
+                    {
+                        <tr>
+                            <td>
+                                <input type="text" class="form-control" placeholder="Give the name of the product" @bind="@ingr.Product" />
+                            </td>
+                            <td>
+                                <Horizontal>
+                                    <LeftContent>
+                                        <input type="number" class="form-control" placeholder="How much is in storage" @bind="@ingr.Amount" min="0" max="65535" />
+                                    </LeftContent>
+                                    <MiddleContent>
+                                        <AuthorizeView Roles="Administrator">
+                                            <Authorized>
+                                                <button type="button" class="btn btn-link" @onclick="() => AddToProduct(ingr)">
+                                                    <i class="fas fa-plus" />
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </MiddleContent>
+                                </Horizontal>
+                            </td>
+                            <td width="160">
+                                <button type="button" class="btn btn-link" @onclick="() => EnableEditing(false, ingr)">
+                                    <i class="fas fa-ban" />
+                                </button>
+                                <AuthorizeView Roles="Administrator">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-link" @onclick="() => UpdateInstance(ingr)">
+                                        <i class="fas fa-check" />
+                                        </button>
+                                        <button type="button" class="btn btn-link" @onclick="() => RemoveInstance(ingr)">
+                                            <i class="fas fa-trash" />
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>
+                                <button type="button" class="btn btn-link" @onclick="() => NavigateToProduct(ingr.Id)">
+                                    <i class="fas fa-info" />
+                                </button> 
+                                @ingr.Product
+                            </td>
+                            <td>@ingr.Amount</td>
+                            <td width="160">
+                                <AuthorizeView Roles="Administrator">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-link" @onclick="() => EnableEditing(true, ingr)">
+                                            <i class="fas fa-pen" />
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                }
+            
+            </tbody>
+        </table>
+
+        <ProductUpdatePopup @ref="popup"></ProductUpdatePopup>
+}
+
+@code {
+    ProductUpdatePopup popup = new ProductUpdatePopup();
+
+    private List<ProductModel> products;
+    private SortingList<ProductModel> Sort = new SortingList<ProductModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = (await ProductService.GetProducts()).ToList();
+
+        Sort.Bind(products);
+        Sort.GetString = ingr => { return ingr.Product; };
+    }
+
+    private async void searchDetails(string search)
+    {
+        products = Sort.CheckItems(search).ToList();
+    }
+
+    private async void EnableEditing(bool flag, ProductModel instanceData)
+    {
+        if (flag && products.Any(ingr => { return ingr.IsEditing; }))
+            return;
+
+        instanceData.IsEditing = flag;
+        if (!flag)
+        {
+            products = (await ProductService.GetProducts()).ToList();
+            Sort.Bind(products);
+            StateHasChanged();
+        }
+    }
+
+    private async void UpdateInstance(ProductModel instanceData)
+    {
+        if (string.IsNullOrEmpty(instanceData.Product))
+            return;
+
+        if (instanceData.Id == -1)
+        {
+            if (!await ProductService.ProductExists(instanceData.Product))
+            {
+                await ProductService.AddProduct(instanceData.Product, instanceData.Amount);
+            }
+        }
+        else
+        {
+            await ProductService.UpdateProduct(instanceData.Id, instanceData.Product, instanceData.Amount);
+        }
+        EnableEditing(false, instanceData);
+        //popup.Show(instanceData.Product);
+    }
+
+    private async void AddToProduct(ProductModel instanceData)
+    {
+        string userInput = await JSRuntime.InvokeAsync<string>("prompt", "How much do you want to add?");
+        userInput = userInput.Replace('.', ',');
+
+        if (int.TryParse(userInput, out int amountToAdd))
+        {
+            instanceData.Amount += amountToAdd;
+            StateHasChanged();
+        }
+    }
+
+    private async void AddProduct()
+    {
+        if (products.Any(ingr => { return ingr.Id == -1 && ingr.IsEditing; }))
+            return;
+
+        products.Insert(0, new ProductModel() { IsEditing = true });
+    }
+
+    private async void RemoveInstance(ProductModel instanceData)
+    {
+        if (instanceData.Id == -1)
+        {
+            EnableEditing(false, instanceData);
+            return;
+        }
+
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to remove the product?");
+        if (confirm)
+        {
+            await ProductService.RemoveProductById(instanceData.Id);
+            EnableEditing(false, instanceData);
+        }
+    }
+
+    private void NavigateToProduct(int id)
+    {
+        NavigationManager.NavigateTo($"product/{id}");
+    }
+}

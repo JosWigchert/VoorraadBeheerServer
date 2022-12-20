@@ -1,0 +1,96 @@
+﻿@inherits LayoutComponentBase
+@using VoorraadBeheer.Authentication;
+@using VoorraadBeheer.Data;
+@using VoorraadBeheer.Models
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager NavigationManager
+@inject ProfileService ProfileService
+@implements IDisposable
+
+<PageTitle>VoorraadBeheer</PageTitle>
+
+@if (preferences.DarkMode)
+{
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.dark.min.css" />
+}
+else
+{
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.light.min.css" />
+}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="css/site.css" rel="stylesheet" />
+    <link href="VoorraadBeheer.styles.css" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="favicon.png"/>
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/" @onclick="Logout">Logout</a>
+                </Authorized>
+                <Authorizing>
+                    <div>
+                        Authenticating
+                    </div>
+                </Authorizing>
+                <NotAuthorized>
+                    <a href="/login">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
+            <div style="margin: 0px 0px 0px 20px;">
+                <ThemeManager />
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private string loginUri = "/login";
+
+    private Preferences preferences = new Preferences();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileService.OnChange += ProfileServiceOnOnChange;
+    }    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            preferences = await ProfileService.GetPreferences();
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
+        await customAuthStateProvider.UpdateAuthenticationState(null);
+    }
+
+    private async Task Navigate(string uri, bool reload)
+    {
+        NavigationManager.NavigateTo(uri, reload);
+    }
+
+    private void ProfileServiceOnOnChange(Preferences newPreferences)
+    {
+        preferences = newPreferences;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileService.OnChange -= ProfileServiceOnOnChange;
+    }
+}

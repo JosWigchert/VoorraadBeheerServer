@@ -1,0 +1,14 @@
+﻿
+@if (IsEnabled)
+{
+    <div class="loading-overlay backdrop-blur" id="loading-overlay">
+        <div class="loading-message">
+            <div class="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+        </div>
+    </div>
+}
+
+@code {
+	[Parameter]
+	public bool IsEnabled { get; set; }
+}

@@ -1,0 +1,32 @@
+﻿@page "/ingredient/{IngredientId:int}"
+@using VoorraadBeheer.Models;
+@using VoorraadBeheer.Data;
+@inject IJSRuntime JSRuntime
+@inject IngredientDetailService IngredientService
+
+@attribute [Authorize(Roles = "Administrator,User")]
+
+<PageTitle>Ingredient</PageTitle>
+
+@if (ingredient.Id < 0)
+{
+    <p>Invalid ingredient selected</p>
+}
+else
+{
+    <h3>@ingredient.Ingredient</h3>
+    <h4>@ingredient.Amount @ingredient.UnitSmall</h4>
+}
+
+@code {
+    [Parameter]
+    public int IngredientId { get; set; }
+
+    private IngredientModel ingredient;
+    private float addAmount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ingredient = (await IngredientService.GetIngredientById(IngredientId));
+    }
+}

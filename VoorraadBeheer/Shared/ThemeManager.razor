@@ -1,0 +1,47 @@
+﻿@using VoorraadBeheer.Data
+@using VoorraadBeheer.Models
+@inject ProfileService ProfileService
+@implements IDisposable
+
+<button class="btn btn-primary" @onclick="ToggleMode">
+    @buttonContent
+</button>
+
+@code {
+    private string buttonContent;
+
+    private Preferences preferences = new Preferences();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProfileService.OnChange += ProfileServiceOnOnChange;
+    }    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            preferences = await ProfileService.GetPreferences();
+            buttonContent = preferences.DarkMode ? "Light Mode" : "Dark Mode";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleMode()
+    {
+        await ProfileService.ToggleDarkMode();
+    }
+
+    private void ProfileServiceOnOnChange(Preferences newPreferences)
+    {
+        preferences = newPreferences;
+        buttonContent = preferences.DarkMode ? "Light Mode" : "Dark Mode";
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ProfileService.OnChange -= ProfileServiceOnOnChange;
+    }
+}

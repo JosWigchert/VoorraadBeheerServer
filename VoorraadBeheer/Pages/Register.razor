@@ -1,0 +1,112 @@
+﻿@page "/register/{token}"
+@using Authentication
+@using VoorraadBeheer.Authentication.Cryptography
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager NavigationManager
+@inject UserDetailService UserService
+@inject CryptographyHelper CryptoHelper
+
+<PageTitle>Register</PageTitle>
+
+<div class="row">
+    @if (validToken)
+    {
+        <div class="col-lg-4 offset-lg-4 pt-4 pb-4 border align-content-center">
+            <div class="mb-3 text-center">
+                <h3>Register</h3>
+            </div>
+            <div class="mb-3">
+                <label>Username</label>
+                <input @bind="username" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label>Password</label>
+                <input @bind="password" type="password" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label>Confirm Password</label>
+                <input @bind="confirmPassword" type="password" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <Horizontal>
+                    <LeftContent>
+                        <button @onclick="CreateAccount" class="btn btn-primary">Register</button>
+                    </LeftContent>
+                    <RightContent>
+                        <div style="color:indianred">
+                            @errorText
+                        </div>
+                    </RightContent>
+                </Horizontal>
+            </div>
+            <AuthorizeView>
+                <Authorized>
+                    You are already logged in
+                </Authorized>
+                <Authorizing>
+                    Checking credentials...
+                </Authorizing>
+            </AuthorizeView>
+        </div>
+    }
+    else
+    {
+        <div class="col-lg-4 offset-lg-4 pt-4 pb-4 border align-content-center">
+            Invalid Token
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string token { get; set; }
+
+    bool validToken = false;
+
+    string username;
+    string password;
+    string confirmPassword;
+
+    string errorText;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CheckToken();
+    }
+
+    private async Task CheckToken()
+    {
+        if (Guid.TryParse(token, out Guid registerToken))
+        {
+            validToken = await UserService.CheckCreateAccountToken(registerToken);
+        }
+    }
+
+    private async Task CreateAccount()
+    {
+        CheckToken();
+
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            return;
+        }
+
+        if (password == confirmPassword)
+        {
+            Guid registerToken = Guid.Parse(token);
+
+            byte[] salt = CryptoHelper.CreateSalt();
+
+            byte[] hash = CryptoHelper.HashPassword(password, salt);
+
+            await UserService.CreateUser(username, salt, hash, registerToken);
+
+            errorText = string.Empty;
+            NavigationManager.NavigateTo("/login", true);
+        }
+        else
+        {
+            errorText = "Invalid username or password";
+        }
+    }
+}
