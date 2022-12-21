@@ -67,7 +67,7 @@ else
                             <td>
                                 <Horizontal>
                                     <LeftContent>
-                                        <input type="number" class="form-control" placeholder="How much is in storage" @bind="@prodIngr.IngredientModel.Amount" min="0" max="65535" />
+                                        <input type="number" class="form-control" placeholder="How much is needed" @bind="@prodIngr.IngredientModel.Amount" min="0" max="65535" />
                                     </LeftContent>
                                     <MiddleContent>
                                         <AuthorizeView Roles="Administrator">
@@ -167,13 +167,18 @@ else
 
     private async void UpdateInstance(ProductIngredientModel instanceData)
     {
-        if (!await ProductService.ProductIngredientExists(product.Id, instanceData.IngredientModel.Id))
+        if (instanceData.IngredientModel.Id < 0)
+            return;
+        if (instanceData.Id < 0)
         {
-            await ProductService.AddProductIngredient(product.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
+            if (!await ProductService.ProductIngredientExists(product.Id, instanceData.IngredientModel.Id))
+            {
+                await ProductService.AddProductIngredient(product.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
+            }
         }
         else
         {
-            await ProductService.UpdateProductIngredientAmount(instanceData.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
+            await ProductService.UpdateProductIngredient(instanceData.Id, instanceData.IngredientModel.Id, instanceData.IngredientModel.Amount);
         }
         EnableEditing(false, instanceData);
 

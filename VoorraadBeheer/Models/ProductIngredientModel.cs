@@ -7,6 +7,7 @@ namespace VoorraadBeheer.Models
         public ProductIngredientModel()
         {
             Id = -1;
+            IngredientModel = new IngredientModel();
         }
 
         public ProductIngredientModel(ProductIngredientModel model)
