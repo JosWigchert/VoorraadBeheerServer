@@ -210,7 +210,7 @@ else
         bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to remove the ingredient?");
         if (confirm)
         {
-            await ProductService.RemoveProductIngredient(product.Id, instanceData.Id);
+            await ProductService.RemoveProductIngredient(product.Id, instanceData.IngredientModel.Id);
             EnableEditing(false, instanceData);
         }
     }
